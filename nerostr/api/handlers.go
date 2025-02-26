@@ -179,22 +179,6 @@ func (s *Server) handleGetPkeyStatus(c *fiber.Ctx) error {
 func (s *Server) handleApiNewUser(c *fiber.Ctx) error {
 	// Get public key from URL param
 	pkey := c.Params("pkey")
-	// GET API key from header "X-API-KEY"
-	apikey := c.Get("X-API-KEY")
-
-	// Check if API key is set
-	if apikey == "" {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "apikey is required",
-		})
-	}
-
-	// Check if API key is valid
-	if apikey != os.Getenv("API_KEY") {
-		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-			"error": "invalid apikey",
-		})
-	}
 
 	npub, err := utils.ParsePubKey(pkey)
 	if err != nil {

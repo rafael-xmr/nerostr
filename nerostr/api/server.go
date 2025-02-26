@@ -3,7 +3,6 @@ package api
 import (
 	"html/template"
 	"os"
-	"path"
 
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
@@ -25,7 +24,7 @@ type Server struct {
 
 func NewServer(listenAddr string, db db.Db) *Server {
 	// Create a new template engine
-	engine := html.New(path.Join(os.Getenv("ROOT_DIR"), "html"), ".html")
+	engine := html.New("html", ".html")
 	if os.Getenv("DEV") == "true" {
 		engine.Reload(true)
 	}
@@ -66,7 +65,7 @@ func (s *Server) SetupMiddleware() {
 
 func (s *Server) RegisterRoutes() {
 	// Static routes
-	s.Router.Static("/static", path.Join(os.Getenv("ROOT_DIR"), "/html/static"), fiber.Static{
+	s.Router.Static("/static", "html/static", fiber.Static{
 		Compress:  true,
 		ByteRange: true,
 	})
@@ -109,10 +108,10 @@ func (s *Server) RegisterRoutes() {
 		return err
 	})
 
-	// HTTP route for getting payment details for a pubkey, requiring an API key
+	// HTTP route for getting payment details for a pubkey
 	s.Router.Post("/api/user/:pkey", func(c *fiber.Ctx) error {
 		log.Debug().Msgf("POST /api/user/%v", c.Params("pkey"))
-		err := s.handleApiAddUser(c)
+		err := s.handleApiNewUser(c)
 		if err != nil {
 			log.Error().Err(err).Msg("Error handling POST /api/user/:pkey")
 		}
@@ -122,7 +121,7 @@ func (s *Server) RegisterRoutes() {
 	// HTTP route for adding a new user from a pubkey, requiring an API key
 	s.Router.Post("/api/add/:pkey", func(c *fiber.Ctx) error {
 		log.Debug().Msgf("POST /api/user/%v", c.Params("pkey"))
-		err := s.handleApiNewUser(c)
+		err := s.handleApiAddUser(c)
 		if err != nil {
 			log.Error().Err(err).Msg("Error handling POST /api/user/:pkey")
 		}
