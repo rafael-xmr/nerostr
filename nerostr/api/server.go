@@ -109,10 +109,20 @@ func (s *Server) RegisterRoutes() {
 		return err
 	})
 
-	// HTTP route for adding a new user from a pubkey, requiring an API key
+	// HTTP route for getting payment details for a pubkey, requiring an API key
 	s.Router.Post("/api/user/:pkey", func(c *fiber.Ctx) error {
 		log.Debug().Msgf("POST /api/user/%v", c.Params("pkey"))
 		err := s.handleApiAddUser(c)
+		if err != nil {
+			log.Error().Err(err).Msg("Error handling POST /api/user/:pkey")
+		}
+		return err
+	})
+
+	// HTTP route for adding a new user from a pubkey, requiring an API key
+	s.Router.Post("/api/add/:pkey", func(c *fiber.Ctx) error {
+		log.Debug().Msgf("POST /api/user/%v", c.Params("pkey"))
+		err := s.handleApiNewUser(c)
 		if err != nil {
 			log.Error().Err(err).Msg("Error handling POST /api/user/:pkey")
 		}

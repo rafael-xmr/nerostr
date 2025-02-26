@@ -8,7 +8,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func PrasePubKey(pk string) (string, error) {
+func ParsePubKey(pk string) (string, error) {
 	// Check if pubkey is `npub`
 	if !strings.HasPrefix(pk, "npub") {
 		npub, err := nip19.EncodePublicKey(pk)

@@ -95,7 +95,7 @@ func (s *Server) handleGetUser(c *fiber.Ctx) error {
 		return c.Redirect("/")
 	}
 
-	npub, err := utils.PrasePubKey(pubkey)
+	npub, err := utils.ParsePubKey(pubkey)
 	if err != nil {
 		log.Debug().Err(err).Msg("Error parsing pubkey")
 		return c.Redirect("/")
@@ -143,7 +143,7 @@ func (s *Server) handleGetPkeyStatus(c *fiber.Ctx) error {
 		})
 	}
 
-	npub, err := utils.PrasePubKey(pubkey)
+	npub, err := utils.ParsePubKey(pubkey)
 	if err != nil {
 		log.Debug().Err(err).Msg("Error parsing pubkey")
 		return c.JSON(fiber.Map{
@@ -176,6 +176,93 @@ func (s *Server) handleGetPkeyStatus(c *fiber.Ctx) error {
 	}
 }
 
+func (s *Server) handleApiNewUser(c *fiber.Ctx) error {
+	// Get public key from URL param
+	pkey := c.Params("pkey")
+	// GET API key from header "X-API-KEY"
+	apikey := c.Get("X-API-KEY")
+
+	// Check if API key is set
+	if apikey == "" {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "apikey is required",
+		})
+	}
+
+	// Check if API key is valid
+	if apikey != os.Getenv("API_KEY") {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "invalid apikey",
+		})
+	}
+
+	npub, err := utils.ParsePubKey(pkey)
+	if err != nil {
+		log.Debug().Err(err).Msg("Error parsing pubkey")
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "error parsing pubkey",
+		})
+	}
+
+	// Check if user exists in database
+	user, err := s.Db.GetUser(npub)
+	if err != nil {
+		log.Debug().Err(err).Msg("Error getting user")
+	}
+
+	// Set the pubkey
+	err = user.SetPubKey(npub)
+	if err != nil {
+		log.Error().Err(err).Msg("Error setting pubkey")
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	// Create a new subaddress for the payment
+	subaddress, err := s.MoneroRpc.CreateNewSubaddress(0, user.PubKey)
+	if err != nil {
+		log.Error().Err(err).Msg("Error creating new subaddress")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+	log.Debug().Msgf("New subaddress: %v", subaddress)
+	user.Address = subaddress
+
+	// Set status to new
+	user.Status = models.UserStatusNew
+
+	// Set date to now
+	user.SetDateNow()
+
+	// Set amount
+	amount, err := strconv.ParseFloat(os.Getenv("ADMISSION_AMOUNT"), 64)
+	if err != nil {
+		log.Error().Err(err).Msg("Error parsing default amount")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+	user.SetAmount(amount)
+
+	// If user does not exist, create new user
+	err = s.Db.NewUser(user)
+	if err != nil {
+		log.Error().Err(err).Msg("Error creating new user")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	log.Debug().Msgf("New user created: %v", user.PubKey)
+
+	return c.JSON(fiber.Map{
+		"address": user.Address,
+		"amount":  user.Amount,
+	})
+}
+
 func (s *Server) handleApiAddUser(c *fiber.Ctx) error {
 	// Get public key from URL param
 	pkey := c.Params("pkey")
@@ -196,7 +283,7 @@ func (s *Server) handleApiAddUser(c *fiber.Ctx) error {
 		})
 	}
 
-	npub, err := utils.PrasePubKey(pkey)
+	npub, err := utils.ParsePubKey(pkey)
 	if err != nil {
 		log.Debug().Err(err).Msg("Error parsing pubkey")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -253,7 +340,7 @@ func (s *Server) handleApiDeleteUser(c *fiber.Ctx) error {
 		})
 	}
 
-	npub, err := utils.PrasePubKey(pkey)
+	npub, err := utils.ParsePubKey(pkey)
 	if err != nil {
 		log.Debug().Err(err).Msg("Error parsing pubkey")
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{

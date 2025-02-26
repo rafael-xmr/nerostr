@@ -30,7 +30,7 @@ func (u *User) SetDateNow() {
 }
 
 func (u *User) SetPubKey(pubkey string) error {
-	npub, err := utils.PrasePubKey(pubkey)
+	npub, err := utils.ParsePubKey(pubkey)
 	if err != nil {
 		log.Error().Err(err).Msg("Error parsing pubkey")
 		return err
