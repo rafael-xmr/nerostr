@@ -194,6 +194,13 @@ func (s *Server) handleApiNewUser(c *fiber.Ctx) error {
 		log.Debug().Err(err).Msg("Error getting user")
 	}
 
+	if user.PubKey != "" {
+		log.Debug().Msgf("User exists: %v", user.PubKey)
+		return c.JSON(fiber.Map{
+			"status": "ok",
+		})
+	}
+
 	// Set the pubkey
 	err = user.SetPubKey(npub)
 	if err != nil {
