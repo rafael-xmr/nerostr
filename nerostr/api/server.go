@@ -3,6 +3,7 @@ package api
 import (
 	"html/template"
 	"os"
+	"path"
 
 	"github.com/goccy/go-json"
 	"github.com/gofiber/fiber/v2"
@@ -24,7 +25,7 @@ type Server struct {
 
 func NewServer(listenAddr string, db db.Db) *Server {
 	// Create a new template engine
-	engine := html.New("html", ".html")
+	engine := html.New(path.Join(os.Getenv("ROOT_DIR"), "html"), ".html")
 	if os.Getenv("DEV") == "true" {
 		engine.Reload(true)
 	}
@@ -65,7 +66,7 @@ func (s *Server) SetupMiddleware() {
 
 func (s *Server) RegisterRoutes() {
 	// Static routes
-	s.Router.Static("/static", "html/static", fiber.Static{
+	s.Router.Static("/static", path.Join(os.Getenv("ROOT_DIR"), "/html/static"), fiber.Static{
 		Compress:  true,
 		ByteRange: true,
 	})
