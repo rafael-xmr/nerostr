@@ -210,16 +210,18 @@ func (s *Server) handleApiNewUser(c *fiber.Ctx) error {
 		})
 	}
 
-	// Create a new subaddress for the payment
-	subaddress, err := s.MoneroRpc.CreateNewSubaddress(0, user.PubKey)
-	if err != nil {
-		log.Error().Err(err).Msg("Error creating new subaddress")
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
+	if user.Address == "" {
+		// Create a new subaddress for the payment
+		subaddress, err := s.MoneroRpc.CreateNewSubaddress(0, user.PubKey)
+		if err != nil {
+			log.Error().Err(err).Msg("Error creating new subaddress")
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+		log.Debug().Msgf("New subaddress: %v", subaddress)
+		user.Address = subaddress
 	}
-	log.Debug().Msgf("New subaddress: %v", subaddress)
-	user.Address = subaddress
 
 	// Set status to new
 	user.Status = models.UserStatusNew
